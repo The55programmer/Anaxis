@@ -1,0 +1,1 @@
+Anaxis is a specialized web-based graphing platform designed to break free from the traditional constraints of standard $x$ and $y$ graphing calculators. Built specifically for students, and educators. Anaxis allows users to completely customize both horizontal and vertical axis variables.
