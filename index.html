@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anaxis</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script defer src="https://unpkg.com/mathlive"></script>
+    
+    <script src="https://unpkg.com/d3@7"></script>
+    <script src="https://unpkg.com/function-plot@1/dist/function-plot.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-computer-modern@0.0.3/computer-modern.css">
+
+    <style>
+        body {
+            background-color: #FFFFFF;
+            color: #000000;
+        }
+        
+        .brand-logo, .footer-text, .latex-font {
+            font-family: "Computer Modern Serif", "CMU Serif", serif !important;
+        }
+        .brand-logo {
+            font-weight: bold;
+            font-style: normal; 
+        }
+
+        /* -------------------------------------------------------------
+           AUTHENTIC LATEX PGFPLOTS STYLE OVERRIDES
+           ------------------------------------------------------------- */
+        .function-plot .axis text, 
+        .function-plot .origin text {
+            fill: #000000 !important;
+            font-family: "Computer Modern Serif", "CMU Serif", serif !important;
+            font-size: 16px !important; 
+            font-style: normal !important; 
+            font-weight: 500 !important;
+        }
+
+        .function-plot .axis line, .function-plot .axis path {
+            stroke: #000000 !important;
+            stroke-width: 1.25px !important;
+        }
+        
+        .function-plot .tip text {
+            fill: #000000 !important;
+            font-family: "Computer Modern Serif", "CMU Serif", serif !important;
+            font-size: 14px !important;
+            font-style: normal !important;
+        }
+        .function-plot .tip rect {
+            fill: #FFFFFF !important;
+            stroke: #000000 !important;
+            stroke-width: 1px !important;
+            rx: 4px !important;
+        }
+
+        math-field {
+            background-color: #FFFFFF;
+            color: #000000;
+            border: 1px solid #E2E8F0;
+            border-radius: 0.5rem;
+            outline: none;
+            padding: 10px 14px;
+            font-size: 1.3rem;
+            width: 100%;
+            display: block;
+        }
+        math-field:focus-within {
+            border-color: #000000;
+            box-shadow: 0 0 0 1px #000000;
+        }
+        .var-input {
+            font-size: 1.2rem;
+            min-height: 46px;
+        }
+
+        /* Forces KaTeX components to align cleanly with our legendary layout design */
+        #legendContainer {
+            display: inline-block;
+            line-height: 1;
+        }
+        .katex {
+            font-size: 1.2rem !important;
+            color: #000000 !important;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col font-sans overflow-hidden">
+
+    <header class="bg-[#FFFFFF] border-b border-slate-200 px-8 py-5">
+        <h1 class="brand-logo text-3xl tracking-wide text-black select-none">
+            Anaxis
+        </h1>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden bg-[#FAFAFA]">
+        
+        <aside class="w-80 bg-[#FFFFFF] border-r border-slate-200 p-6 flex flex-col space-y-6 overflow-y-auto shadow-sm z-10">
+            <div>
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-800 mb-3">Assign Variables</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Vertical</label>
+                        <math-field id="varY" class="var-input text-center" virtual-keyboard-mode="never">y</math-field>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Horizontal</label>
+                        <math-field id="varX" class="var-input text-center" virtual-keyboard-mode="never">x</math-field>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-slate-200">
+
+            <div>
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-800 mb-2">Equation Editor</h2>
+                <p class="text-[11px] text-slate-400 mb-3">Formulate expressions live:</p>
+                <div class="space-y-3">
+                    <math-field id="mathInput">\sin(x)</math-field>
+                </div>
+            </div>
+
+            <button id="renderBtn" class="w-full bg-black hover:bg-slate-800 text-white font-medium py-3 rounded-xl transition-all active:scale-[0.99] mt-auto">
+                Plot Expression
+            </button>
+        </aside>
+
+        <main class="flex-1 p-8 flex flex-col items-center justify-center relative">
+            
+            <div id="graph-wrapper" class="w-full h-full max-w-4xl max-h-[500px] bg-[#FFFFFF] border border-slate-200 rounded-2xl p-6 relative shadow-sm flex items-center justify-center mb-4">
+                
+                <div class="absolute left-10 top-1/2 -translate-y-1/2 z-10 select-none pointer-events-none transform -rotate-90 origin-left">
+                    <math-field id="yLabelDisplay" read-only style="border:none; background:transparent; padding:0; font-size:1.35rem; color:#000000;"></math-field>
+                </div>
+
+                <div class="absolute left-1/2 bottom-3 -translate-x-1/2 z-10 select-none pointer-events-none">
+                    <math-field id="xLabelDisplay" read-only style="border:none; background:transparent; padding:0; font-size:1.35rem; color:#000000;"></math-field>
+                </div>
+
+                <div class="absolute right-10 top-10 z-20 bg-white border border-black px-4 py-2 flex items-center space-x-3 shadow-sm select-none">
+                    <div class="w-6 h-[2px] bg-red-600"></div>
+                    <div id="legendContainer"></div>
+                </div>
+
+                <button id="saveGraphBtn" title="Save Graph Plot Image" class="absolute left-10 top-10 z-20 bg-white hover:bg-slate-50 border border-slate-200 p-2.5 rounded-xl shadow-sm transition-all active:scale-95 flex items-center justify-center group">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-slate-700 group-hover:text-black">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                </button>
+
+                <div id="plot" class="w-full h-full flex items-center justify-center"></div>
+            </div>
+
+            <footer class="w-full max-w-4xl flex justify-center items-center py-2 select-none">
+                <p class="footer-text text-xs tracking-widest text-slate-400">
+                    &copy; 2026 ANAXIS BY Plum Kasidis
+                </p>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const mathInput = document.getElementById('mathInput');
+            const varX = document.getElementById('varX');
+            const varY = document.getElementById('varY');
+            const xLabelDisplay = document.getElementById('xLabelDisplay');
+            const yLabelDisplay = document.getElementById('yLabelDisplay');
+            const legendContainer = document.getElementById('legendContainer');
+            const graphWrapper = document.getElementById('graph-wrapper');
+            const saveGraphBtn = document.getElementById('saveGraphBtn');
+
+            function render() {
+                const horizontalVar = varX.getValue('ascii-math') || 'x';
+                
+                xLabelDisplay.setValue(varX.value);
+                yLabelDisplay.setValue(varY.value);
+
+                // Use authentic KaTeX compiler script to render the legend equation
+                // This guarantees true LaTeX fonts inside saved images with perfect spacing
+                if (typeof katex !== 'undefined') {
+                    const rawLatexEquation = `${varY.value} = ${mathInput.value}`;
+                    try {
+                        katex.render(rawLatexEquation, legendContainer, {
+                            throwOnError: false
+                        });
+                    } catch (kErr) {
+                        console.warn(kErr);
+                    }
+                }
+
+                let mathString = mathInput.getValue('ascii-math');
+
+                if (horizontalVar !== 'x') {
+                    const escapedVar = horizontalVar.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                    const regex = new RegExp('\\b' + escapedVar.trim() + '\\b', 'g');
+                    mathString = mathString.replace(regex, 'x');
+                }
+
+                mathString = mathString.replace(/·/g, '*'); 
+
+                try {
+                    const width = graphWrapper.clientWidth - 80;
+                    const height = graphWrapper.clientHeight - 80;
+
+                    document.getElementById('plot').innerHTML = "";
+
+                    let dynamicYDomain = [-20, 120];
+                    let dynamicXDomain = [-10, 12];
+                    
+                    if(mathString.includes('sin') || mathString.includes('cos')) {
+                        dynamicYDomain = [-2, 2];
+                    }
+
+                    functionPlot({
+                        target: '#plot',
+                        width: width,
+                        height: height,
+                        grid: false, 
+                        xAxis: { domain: dynamicXDomain },
+                        yAxis: { domain: dynamicYDomain }, 
+                        data: [{
+                            fn: mathString,
+                            color: '#DC2626', 
+                            graphType: 'polyline',
+                            attr: { 'stroke-width': 1.75 }
+                        }]
+                    });
+
+                    setTimeout(() => {
+                        d3.selectAll('.axis-line').attr('stroke', '#000000');
+                    }, 50);
+
+                } catch (err) {
+                    // Suppress breaks during typing states
+                }
+            }
+
+            /* -------------------------------------------------------------
+               HIGH-FIDELITY SCREEN-CAPTURE SAVE SYSTEM
+               ------------------------------------------------------------- */
+            function exportGraphAsPNG() {
+                // Temporarily hide the download icon so it's not saved in the image
+                saveGraphBtn.style.opacity = '0';
+
+                const captureOptions = {
+                    scale: 3, // High resolution sampling density
+                    useCORS: true, 
+                    backgroundColor: '#FFFFFF',
+                    logging: false
+                };
+
+                html2canvas(graphWrapper, captureOptions).then(canvas => {
+                    saveGraphBtn.style.opacity = '1';
+
+                    const pngURL = canvas.toDataURL('image/png');
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = pngURL;
+                    
+                    const cleanFileNameY = varY.getValue('ascii-math').replace(/[^a-z0-9]/gi, '_');
+                    downloadLink.download = `Anaxis_Plot_${cleanFileNameY}.png`;
+                    
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                });
+            }
+
+            // Bindings
+            saveGraphBtn.addEventListener('click', exportGraphAsPNG);
+            mathInput.addEventListener('input', render);
+            varX.addEventListener('input', render);
+            varY.addEventListener('input', render);
+            window.addEventListener('resize', render);
+
+            setTimeout(render, 600); // Small initial startup delay to let script assets execute smoothly
+        });
+    </script>
+</body>
+</html>
